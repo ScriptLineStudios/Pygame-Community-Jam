@@ -6,7 +6,7 @@ from scripts.spriteSheets import *
 pygame.init()
 
 display = pygame.display.set_mode((800, 800))
-
+display_size = display.get_size()
 clock = pygame.time.Clock()
 
 ship_img = pygame.image.load("ship.png").convert()
@@ -39,9 +39,9 @@ class planet():
 planetSheet = pygame.image.load('planet.png').convert()
 planetSheet.set_colorkey()
 planetSize = [200,200]#planetFrameSize
-mainPlanet = planet([display.get_width()//2-planetSize[0]//2,display.get_height()//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
+mainPlanet = planet([display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
 
-class star():
+class star:
       def __init__(self,pos,radius,color):
           self.pos = pos
           self.radius = radius
@@ -50,7 +50,7 @@ class star():
       def draw(self,display):
           pygame.draw.circle(display,self.color,self.pos,self.radius)
 
-class space():#basic space generator
+class space:#basic space generator
       def __init__(self,starNum):
           self.stars = []
           self.colors = [(255,255,255),(192,192,192),(128,128,128),(255, 184, 69),(251, 121, 116),(249, 118, 152),(163, 72, 166)]
@@ -76,13 +76,35 @@ class Ship:
             self.speed = [0,0]
             self.speedIncrease = 1.0
 
+            self.centered = [0,0]
+
       def main(self, display):
-            
+            self.x += self.speed[0]*self.speedIncrease
+            self.y -= self.speed[1]*self.speedIncrease
             self.rect = ship_img.get_rect(topleft=(self.x,self.y))
             image = pygame.transform.rotate(ship_img, self.angle)
-            display.blit(image, rotate(image,self.rect).topleft)#rotate(image,self.rect) - rotate from center
-            
 
+            self.centered = rotate(image,self.rect).topleft
+            display.blit(image, self.centered)#rotate(image,self.rect) - rotate from center
+   
+#Would be cool if we add mask collision(pixel perfect), but for now rects
+bullets = []
+class bullet:
+      def __init__(self,pos,angle):
+          self.pos = pos
+          self.radius = 5
+          self.color = (255,255,255)
+          self.angle = angle        
+
+          self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
+
+      def main(self,display):
+          self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
+          
+          self.pos[0] += math.cos(math.radians(self.angle))
+          self.pos[1] -= math.sin(math.radians(self.angle))
+
+          pygame.draw.circle(display,self.color,self.pos,self.radius)
 ship = Ship(300, 300)
 
 while True:
@@ -94,6 +116,13 @@ while True:
             if event.type == pygame.QUIT:
                   pygame.quit()
                   sys.exit()
+
+            if event.type == KEYDOWN:
+                  if event.key == K_SPACE:
+                        shootPos = [ship.rect.center[0]+math.cos(math.radians(ship.angle))*(ship.size[0]//2),ship.rect.center[1]-math.sin(math.radians(ship.angle))*(ship.size[1]//2)]
+                        bullets.append(bullet(shootPos,ship.angle))
+
+
     
       mouse_x, mouse_y = pygame.mouse.get_pos()
       rel_x, rel_y = mouse_x - (ship.x+ship.size[0]//2), mouse_y - (ship.y+ship.size[1]//2)
@@ -109,11 +138,26 @@ while True:
 
       keys = pygame.key.get_pressed()
       if mc[0] == True:
-            ship.y -= math.sin(math.radians(angle))*5
-            ship.x += math.cos(math.radians(angle))*5
-      elif mc[2] == True:
-            ship.y += math.sin(math.radians(angle))*5
-            ship.x -= math.cos(math.radians(angle))*5
+            ship.speed[0] = math.cos(math.radians(angle))*5
+            ship.speed[1] = math.sin(math.radians(angle))*5
+            if ship.speedIncrease < 1.5:
+                  ship.speedIncrease += 0.1
+      else:
+          if ship.speedIncrease > 0:
+              ship.speedIncrease -= 0.04
+          else:
+              ship.speedIncrease = 0
+              
+      if mc[2] == True:
+            ship.speed[0] = -math.cos(math.radians(angle))*3
+            ship.speed[1] = -math.sin(math.radians(angle))*3
+            if ship.speedIncrease < 1.5:
+                  ship.speedIncrease += 0.1
+      else:
+          if ship.speedIncrease > 0:
+              ship.speedIncrease -= 0.02
+          else:
+              ship.speedIncrease = 0
             
       if keys[pygame.K_w]:
             ship.y -= 5
@@ -127,6 +171,10 @@ while True:
 
       ship.angle = angle
       ship.main(display)
+
+      for bull in bullets:
+            bull.main(display)
+      #pygame.draw.circle(display,(255,0,0),,5)
 
       pygame.display.update()
       clock.tick(60)
