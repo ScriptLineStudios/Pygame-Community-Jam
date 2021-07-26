@@ -46,14 +46,24 @@ while True:
 
       angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
 
-      keys = pygame.key.get_pressed()
+      #mouse controlls
+      mp = pygame.mouse.get_pos()#get mouse position
+      mc = pygame.mouse.get_pressed()#get mouse press event
 
-      if keys[pygame.K_w]:
+
+      keys = pygame.key.get_pressed()
+      if mc[0] == True:
             ship.y -= math.sin(math.radians(angle))*5
             ship.x += math.cos(math.radians(angle))*5
-      if keys[pygame.K_s]:
+      elif mc[2] == True:
             ship.y += math.sin(math.radians(angle))*5
             ship.x -= math.cos(math.radians(angle))*5
+            
+      if keys[pygame.K_w]:
+            ship.y -= 5
+      if keys[pygame.K_s]:
+            ship.y += 5
+
       if keys[pygame.K_a]:
             ship.angle -= 5
       if keys[pygame.K_d]:
