@@ -12,6 +12,9 @@ clock = pygame.time.Clock()
 ship_img = pygame.image.load("assets/images/ship1.png").convert()
 ship_img.set_colorkey((0,0,0))
 
+asteroid_img = pygame.image.load("assets/images/ast.png").convert()
+asteroid_img.set_colorkey((255,255,255))
+
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
       return rect
@@ -31,17 +34,18 @@ class planet():
               self.planetAnim = 0# animatoin loop
           self.planetAnim += 0.75
         
-          display.blit(self.planetImgs[round(self.planetAnim)],self.pos)
+          display.blit(pygame.transform.scale(self.planetImgs[round(self.planetAnim)], (128, 128)),self.pos)
       def ifCollide(self,rect):
           #if planet rect collide with other rect
           if self.planetRect.colliderect(rect):
                 return True
           else:
                 return False
+
       
 planetSheet = pygame.image.load('assets/images/planet.png').convert()
 planetSheet.set_colorkey()
-planetSize = [200,200]#planetFrameSize
+planetSize = [128,128]#planetFrameSize
 mainPlanet = planet([display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
 
 class star:
@@ -52,6 +56,31 @@ class star:
 
       def draw(self,display):
           pygame.draw.circle(display,self.color,self.pos,self.radius)
+
+class Asteroid:
+      def __init__(self, x, y):
+            self.x = x
+            self.y = y
+            self.rect = None
+            self.angle = rd.randrange(0,360)
+      def main(self, display):
+
+            display.blit(pygame.transform.scale(pygame.transform.rotate(asteroid_img, self.angle), (55, 50)), (self.x, self.y))
+            #pygame.draw.rect(display, (255, 255, 255), (self.x, self.y, 50,50))
+            self.rect = pygame.Rect(self.x, self.y, 55, 50)
+
+            ast_vector = pygame.Vector2(self.rect.center)
+            planet_vector = pygame.Vector2(planetRect.center)
+
+            try:
+                  towards = (planet_vector - ast_vector).normalize() * 2
+            except:
+                  pass
+
+            self.x += towards[0]
+            self.y += towards[1]
+
+
 
 class space:#basic space generator
       def __init__(self,starNum):
@@ -81,7 +110,10 @@ class Ship:
 
             self.centered = [0,0]
 
+            self.hitbox = None
+
       def main(self, display):
+            self.hitbox = pygame.Rect(self.x, self.y, 45, 45)
             self.x += self.speed[0]*self.speedIncrease
             self.y -= self.speed[1]*self.speedIncrease
             self.rect = ship_img.get_rect(topleft=(self.x,self.y))
@@ -115,6 +147,14 @@ shootTimer = 20
 
 ship = Ship(300, 300)
 
+asteroids = []
+
+planetRect = pygame.Rect(display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2, 128, 128)
+
+asteroid_spawn_cooldown = 0
+
+rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+
 while True:
       display.fill((0,0,0))
       
@@ -133,6 +173,14 @@ while True:
                         shootPos = [ship.rect.center[0]+math.cos(math.radians(ship.angle))*(ship.size[0]//2),ship.rect.center[1]-math.sin(math.radians(ship.angle))*(ship.size[1]//2)]
                         bullets.append(bullet(shootPos,ship.angle))
                         shootTimer = 0
+
+      if asteroid_spawn_cooldown == 0:
+            choice = rd.choice(rand_spawns)
+            asteroids.append(Asteroid(choice[0], choice[1]))
+            rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+            asteroid_spawn_cooldown = 75
+      else:
+            asteroid_spawn_cooldown -= 1
 
     
       mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -183,8 +231,15 @@ while True:
       ship.angle = angle
       ship.main(display)
 
+
       for bull in bullets:
             bull.main(display)
+
+      for asteroid in asteroids:
+            asteroid.main(display)
+
+            if asteroid.rect.colliderect(planetRect):
+                  asteroids.remove(asteroid)
       #pygame.draw.circle(display,(255,0,0),,5)
 
       pygame.display.update()
