@@ -65,7 +65,7 @@ while True:
             ship.y += 5
 
       if keys[pygame.K_a]:
-            ship.angle -= 5
+            ship.x -= 5
       if keys[pygame.K_d]:
             ship.x += 5
 
