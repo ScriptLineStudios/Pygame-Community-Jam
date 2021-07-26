@@ -9,8 +9,8 @@ display = pygame.display.set_mode((800, 800))
 display_size = display.get_size()
 clock = pygame.time.Clock()
 
-ship_img = pygame.image.load("ship.png").convert()
-ship_img.set_colorkey((255,255,255))
+ship_img = pygame.image.load("assets/images/ship1.png").convert()
+ship_img.set_colorkey((0,0,0))
 
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
@@ -24,6 +24,8 @@ class planet():
           self.planetAnim = 0
           self.maxAnim = 198
 
+          self.mask = pygame.mask.from_surface(self.planetImgs[0])
+          
       def main(self,display):#main function(draw planet frames
           if self.planetAnim >= self.maxAnim:
               self.planetAnim = 0# animatoin loop
@@ -31,12 +33,13 @@ class planet():
         
           display.blit(self.planetImgs[round(self.planetAnim)],self.pos)
       def ifCollide(self,rect):
+          #if planet rect collide with other rect
           if self.planetRect.colliderect(rect):
                 return True
           else:
                 return False
-
-planetSheet = pygame.image.load('planet.png').convert()
+      
+planetSheet = pygame.image.load('assets/images/planet.png').convert()
 planetSheet.set_colorkey()
 planetSize = [200,200]#planetFrameSize
 mainPlanet = planet([display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
@@ -94,23 +97,31 @@ class bullet:
           self.pos = pos
           self.radius = 5
           self.color = (255,255,255)
-          self.angle = angle        
+          self.angle = angle
+
+          self.bulletSpeed = 5
 
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
 
       def main(self,display):
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
           
-          self.pos[0] += math.cos(math.radians(self.angle))
-          self.pos[1] -= math.sin(math.radians(self.angle))
+          self.pos[0] += math.cos(math.radians(self.angle))*self.bulletSpeed
+          self.pos[1] -= math.sin(math.radians(self.angle))*self.bulletSpeed
 
           pygame.draw.circle(display,self.color,self.pos,self.radius)
+
+shootTimer = 20
+
 ship = Ship(300, 300)
 
 while True:
       display.fill((0,0,0))
       
       spaceBG.draw(display)
+
+      if shootTimer < 20:
+            shootTimer += 1
       
       for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -118,10 +129,10 @@ while True:
                   sys.exit()
 
             if event.type == KEYDOWN:
-                  if event.key == K_SPACE:
+                  if event.key == K_SPACE and shootTimer == 20:
                         shootPos = [ship.rect.center[0]+math.cos(math.radians(ship.angle))*(ship.size[0]//2),ship.rect.center[1]-math.sin(math.radians(ship.angle))*(ship.size[1]//2)]
                         bullets.append(bullet(shootPos,ship.angle))
-
+                        shootTimer = 0
 
     
       mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -144,7 +155,7 @@ while True:
                   ship.speedIncrease += 0.1
       else:
           if ship.speedIncrease > 0:
-              ship.speedIncrease -= 0.04
+              ship.speedIncrease -= 0.005
           else:
               ship.speedIncrease = 0
               
