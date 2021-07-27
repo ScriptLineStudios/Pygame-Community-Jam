@@ -12,6 +12,14 @@ clock = pygame.time.Clock()
 ship_img = pygame.image.load("assets/images/ship1.png").convert()
 ship_img.set_colorkey((0,0,0))
 
+asteroid_imgs = spriteSheet(pygame.image.load("assets/images/asteroids.png").convert(),[100,100])
+asteroidMasks = []
+for astimg in asteroid_imgs:
+      astimg.set_colorkey((255,255,255))
+      asteroidMasks.append(pygame.mask.from_surface(astimg))
+
+
+            
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
       return rect
@@ -24,24 +32,33 @@ class planet():
           self.planetAnim = 0
           self.maxAnim = 198
 
-          self.mask = pygame.mask.from_surface(self.planetImgs[0])
+          self.planetImgs[0].set_colorkey((0,0,0))
+          self.mask = pygame.mask.from_surface(pygame.transform.scale(self.planetImgs[0],(128,128)))
           
       def main(self,display):#main function(draw planet frames
           if self.planetAnim >= self.maxAnim:
               self.planetAnim = 0# animatoin loop
           self.planetAnim += 0.75
-        
-          display.blit(self.planetImgs[round(self.planetAnim)],self.pos)
+          
+          display.blit(pygame.transform.scale(self.planetImgs[round(self.planetAnim)], (128, 128)),self.pos)
+          #display.blit(self.mask.to_surface(),self.pos) #draw mask
       def ifCollide(self,rect):
           #if planet rect collide with other rect
           if self.planetRect.colliderect(rect):
                 return True
           else:
                 return False
+
+      def ifCollideMask(self,mask,maskPos):
+            distance = [int(maskPos[0]-self.pos[0]),int(maskPos[1]-self.pos[1])]#distance between two masks
+            if self.mask.overlap(mask,distance):
+                  return True
+            else:
+                  return False
       
 planetSheet = pygame.image.load('assets/images/planet.png').convert()
 planetSheet.set_colorkey()
-planetSize = [200,200]#planetFrameSize
+planetSize = [128,128]#planetFrameSize
 mainPlanet = planet([display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
 
 class star:
@@ -52,6 +69,37 @@ class star:
 
       def draw(self,display):
           pygame.draw.circle(display,self.color,self.pos,self.radius)
+
+class Asteroid:
+      def __init__(self, x, y, image,mask):
+            self.x = x
+            self.y = y
+            self.rect = None
+            self.angle = rd.randrange(0,360)
+
+            self.image = image
+            self.mask = mask #mask will help with pixel perfect collision
+      def main(self, display):
+
+            display.blit(pygame.transform.scale(pygame.transform.rotate(self.image, self.angle), (55, 50)), (self.x, self.y))
+            self.mask = pygame.mask.from_surface(pygame.transform.scale(pygame.transform.rotate(self.image, self.angle), (55, 50)))
+            #pygame.draw.rect(display, (255, 255, 255), (self.x, self.y, 50,50))
+            self.rect = pygame.Rect(self.x, self.y, 55, 50)
+            
+
+            ast_vector = pygame.Vector2(self.rect.center)
+            planet_vector = pygame.Vector2(planetRect.center)
+
+            try:
+                  towards = (planet_vector - ast_vector).normalize() * 2
+
+            except:
+                  pass
+
+            self.x += towards[0]
+            self.y += towards[1]
+
+
 
 class space:#basic space generator
       def __init__(self,starNum):
@@ -81,7 +129,10 @@ class Ship:
 
             self.centered = [0,0]
 
+            self.hitbox = None
+
       def main(self, display):
+            self.hitbox = pygame.Rect(self.x, self.y, 45, 45)
             self.x += self.speed[0]*self.speedIncrease
             self.y -= self.speed[1]*self.speedIncrease
             self.rect = ship_img.get_rect(topleft=(self.x,self.y))
@@ -115,6 +166,14 @@ shootTimer = 20
 
 ship = Ship(300, 300)
 
+asteroids = []
+
+planetRect = pygame.Rect(display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2, 128, 128)
+
+asteroid_spawn_cooldown = 0
+
+rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+
 while True:
       display.fill((0,0,0))
       
@@ -134,6 +193,15 @@ while True:
                         bullets.append(bullet(shootPos,ship.angle))
                         shootTimer = 0
 
+      if asteroid_spawn_cooldown == 0:
+            ImageIndex = rd.randint(0,len(asteroid_imgs)-1)
+            choice = rd.choice(rand_spawns)
+            asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
+            rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+            asteroid_spawn_cooldown = 75
+      else:
+            asteroid_spawn_cooldown -= 1
+
     
       mouse_x, mouse_y = pygame.mouse.get_pos()
       rel_x, rel_y = mouse_x - (ship.x+ship.size[0]//2), mouse_y - (ship.y+ship.size[1]//2)
@@ -144,8 +212,9 @@ while True:
       mp = pygame.mouse.get_pos()#get mouse position
       mc = pygame.mouse.get_pressed()#get mouse press event
 
+      
       mainPlanet.main(display)
-
+      
 
       keys = pygame.key.get_pressed()
       if mc[0] == True:
@@ -183,9 +252,25 @@ while True:
       ship.angle = angle
       ship.main(display)
 
+
       for bull in bullets:
             bull.main(display)
-      #pygame.draw.circle(display,(255,0,0),,5)
+            try:
+                  if bull.pos[0] < 0 or bull.pos[0] > display_size[0]:
+                        bullets.pop(bullets.index(bull))
+
+                  if bull.pos[1] < 0 or bull.pos[1] > display_size[1]:
+                        bullets.pop(bullets.index(bull))
+            except:
+                  pass
+
+      
+      for asteroid in asteroids:
+            asteroid.main(display)
+
+            if asteroid.rect.colliderect(planetRect):
+                  if mainPlanet.ifCollideMask(asteroid.mask,(asteroid.x,asteroid.y)):
+                        asteroids.remove(asteroid)
 
       pygame.display.update()
       clock.tick(60)
