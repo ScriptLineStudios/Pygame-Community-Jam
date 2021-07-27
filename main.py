@@ -10,7 +10,7 @@ display_size = display.get_size()
 clock = pygame.time.Clock()
 
 ship_img = pygame.image.load("assets/images/ship1.png").convert()
-ship_img.set_colorkey((0,0,0))
+ship_img.set_colorkey((255,255,255))
 
 asteroid_imgs = spriteSheet(pygame.image.load("assets/images/asteroids.png").convert(),[100,100])
 asteroidMasks = []
@@ -18,6 +18,26 @@ for astimg in asteroid_imgs:
       astimg.set_colorkey((255,255,255))
       asteroidMasks.append(pygame.mask.from_surface(astimg))
 
+asteroid_bit_imgs_ = [pygame.image.load("assets/images/bit1.png"), pygame.image.load("assets/images/bit2.png"),
+                     pygame.image.load("assets/images/bit3.png"), pygame.image.load("assets/images/bit4.png"),
+                     pygame.image.load("assets/images/bit5.png")]
+
+asteroid_bit_imgs = []
+
+for img in asteroid_bit_imgs_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      asteroid_bit_imgs.append(img)
+
+fire_particles_ = [pygame.image.load("assets/images/fire_particle.png"), pygame.image.load("assets/images/fire_particle_1.png")
+                   , pygame.image.load("assets/images/fire_particle_2.png")]
+
+fire_particles = []
+
+for img in fire_particles_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      fire_particles.append(img)
 
             
 def rotate(rotatedImage, rect):
@@ -80,12 +100,11 @@ class Asteroid:
             self.image = image
             self.mask = mask #mask will help with pixel perfect collision
       def main(self, display):
-
+            
             display.blit(pygame.transform.scale(pygame.transform.rotate(self.image, self.angle), (55, 50)), (self.x, self.y))
             self.mask = pygame.mask.from_surface(pygame.transform.scale(pygame.transform.rotate(self.image, self.angle), (55, 50)))
             #pygame.draw.rect(display, (255, 255, 255), (self.x, self.y, 50,50))
             self.rect = pygame.Rect(self.x, self.y, 55, 50)
-            
 
             ast_vector = pygame.Vector2(self.rect.center)
             planet_vector = pygame.Vector2(planetRect.center)
@@ -150,7 +169,7 @@ class bullet:
           self.color = (255,255,255)
           self.angle = angle
 
-          self.bulletSpeed = 5
+          self.bulletSpeed = 10
 
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
 
@@ -162,17 +181,34 @@ class bullet:
 
           pygame.draw.circle(display,self.color,self.pos,self.radius)
 
+class particle(object):
+    def __init__(self, x, y, x_vel, y_vel, radius, color, gravity_scale, images, lifetime):
+        self.x = x 
+        self.y = y
+        self.x_vel = x_vel
+        self.y_vel = y_vel
+        self.gravity = 1
+        self.radius = radius
+        self.color = color
+        self.lifetime = lifetime
+        self.gravity_scale = gravity_scale
+        self.img = rd.choice(images)
+
+    def draw(self, display):
+        self.lifetime -= 1
+        self.gravity -= self.gravity_scale
+        self.x += self.x_vel
+        self.y += self.y_vel * self.gravity
+        display.blit(self.img, (int(self.x), int(self.y)))
+        #pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
+
 shootTimer = 20
-
 ship = Ship(300, 300)
-
 asteroids = []
-
 planetRect = pygame.Rect(display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2, 128, 128)
-
 asteroid_spawn_cooldown = 0
-
 rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+particles = []
 
 while True:
       display.fill((0,0,0))
@@ -198,11 +234,10 @@ while True:
             choice = rd.choice(rand_spawns)
             asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
             rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
-            asteroid_spawn_cooldown = 75
+            asteroid_spawn_cooldown = 100
       else:
             asteroid_spawn_cooldown -= 1
 
-    
       mouse_x, mouse_y = pygame.mouse.get_pos()
       rel_x, rel_y = mouse_x - (ship.x+ship.size[0]//2), mouse_y - (ship.y+ship.size[1]//2)
 
@@ -212,12 +247,11 @@ while True:
       mp = pygame.mouse.get_pos()#get mouse position
       mc = pygame.mouse.get_pressed()#get mouse press event
 
-      
       mainPlanet.main(display)
       
-
       keys = pygame.key.get_pressed()
       if mc[0] == True:
+            particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 30)))
             ship.speed[0] = math.cos(math.radians(angle))*5
             ship.speed[1] = math.sin(math.radians(angle))*5
             if ship.speedIncrease < 1.5:
@@ -239,19 +273,24 @@ while True:
           else:
               ship.speedIncrease = 0
             
-      if keys[pygame.K_w]:
-            ship.y -= 5
-      if keys[pygame.K_s]:
-            ship.y += 5
+      #if keys[pygame.K_w]:
+        #    ship.y -= 5
+      #if keys[pygame.K_s]:
+       #     ship.y += 5
 
-      if keys[pygame.K_a]:
-            ship.x -= 5
-      if keys[pygame.K_d]:
-            ship.x += 5
+      #if keys[pygame.K_a]:
+       #     ship.x -= 5
+      #if keys[pygame.K_d]:
+       #     ship.x += 5
+
+      for par in particles:
+            if par.lifetime > 0:
+                  par.draw(display)
+            else:
+                  particles.remove(par)
 
       ship.angle = angle
       ship.main(display)
-
 
       for bull in bullets:
             bull.main(display)
@@ -261,10 +300,20 @@ while True:
 
                   if bull.pos[1] < 0 or bull.pos[1] > display_size[1]:
                         bullets.pop(bullets.index(bull))
+
+                  for ast in asteroids:
+                        if ast.rect.colliderect(bull.rect):
+                              for i in range(15):
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), 0.1, asteroid_bit_imgs, 100))
+
+                              asteroids.remove(ast)
+
+                  if bull.rect.colliderect(planetRect):
+                        if mainPlanet.ifCollideMask(asteroid.mask,(bull.pos[0],bull.pos[1])):
+                              bullets.remove(bull)
             except:
                   pass
 
-      
       for asteroid in asteroids:
             asteroid.main(display)
 
