@@ -283,17 +283,18 @@ while True:
             
       keys = pygame.key.get_pressed()
       #event check
-
+      
       if mainPlanet.ifCollideMask(ship.mask,[ship.x,ship.y]):
-            PlanetShipDist = [mainPlanet.center[0]-ship.centered[0],mainPlanet.center[1]-ship.centered[1]]
-            ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])
-            ship.speed[0] = -ship.speed[0]-math.cos(math.radians(ang))*10
-            ship.speed[1] = -ship.speed[1]+math.sin(math.radians(ang))*10
+            PlanetShipDist = [mainPlanet.center[0]-ship.rect.center[0],mainPlanet.center[1]-ship.rect.center[1]]#distance between planet center and ship center
+            ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])#getting angle from hypotenuse
+            
+            ship.speed[0] = -ship.speed[0]-math.cos(ang)*10#reject ship from planet
+            ship.speed[1] = -ship.speed[1]+math.sin(ang)*10#
             ship.speedIncrease = 0.7
             mainPlanet.boundTimer = mainPlanet.maxBoundTimer
             mainPlanet.transparency = 0
             
-      elif mc[0] == True:
+      if mc[0] == True and mainPlanet.boundTimer == 0:
             particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 30)))
             ship.speed[0] = math.cos(math.radians(angle))*5
             ship.speed[1] = math.sin(math.radians(angle))*5
@@ -315,7 +316,7 @@ while True:
               ship.speedIncrease -= 0.02
           else:
               ship.speedIncrease = 0
-            
+
       #if keys[pygame.K_w]:
         #    ship.y -= 5
       #if keys[pygame.K_s]:
