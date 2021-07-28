@@ -54,6 +54,14 @@ class planet():
 
           self.planetImgs[0].set_colorkey((0,0,0))
           self.mask = pygame.mask.from_surface(pygame.transform.scale(self.planetImgs[0],(128,128)))
+
+          self.center = [800//2,800//2]
+          
+          self.boundTimer = 0
+          self.maxBoundTimer = 20
+          self.transparency = 0
+          self.Bound = pygame.image.load('assets/images/bound.png')
+          self.Bound.set_colorkey((255,255,255))
           
       def main(self,display):#main function(draw planet frames
           if self.planetAnim >= self.maxAnim:
@@ -75,6 +83,16 @@ class planet():
                   return True
             else:
                   return False
+
+      def drawBound(self,display):
+            if self.boundTimer < self.maxBoundTimer//2:
+                  self.transparency -= 20
+            else:
+                  self.transparency += 20
+            bound = self.Bound.copy()
+            bound.set_alpha(self.transparency)
+
+            display.blit(bound,self.pos)
       
 planetSheet = pygame.image.load('assets/images/planet.png').convert()
 planetSheet.set_colorkey()
@@ -150,6 +168,8 @@ class Ship:
 
             self.hitbox = None
 
+            self.mask = pygame.mask.from_surface(ship_img)
+
       def main(self, display):
             self.hitbox = pygame.Rect(self.x, self.y, 45, 45)
             self.x += self.speed[0]*self.speedIncrease
@@ -158,6 +178,7 @@ class Ship:
             image = pygame.transform.rotate(ship_img, self.angle)
 
             self.centered = rotate(image,self.rect).topleft
+            self.mask = pygame.mask.from_surface(image)
             display.blit(image, self.centered)#rotate(image,self.rect) - rotate from center
    
 #Would be cool if we add mask collision(pixel perfect), but for now rects
@@ -168,6 +189,14 @@ class bullet:
           self.radius = 5
           self.color = (255,255,255)
           self.angle = angle
+
+
+          self.surf = pygame.Surface((self.radius*2,self.radius*2))
+          self.surf.fill((0,0,0))
+          self.surf.set_colorkey((0,0,0))
+          pygame.draw.circle(self.surf,(255,255,255),[self.radius,self.radius],self.radius)
+                             
+          self.mask = pygame.mask.from_surface(self.surf)
 
           self.bulletSpeed = 10
 
@@ -248,9 +277,23 @@ while True:
       mc = pygame.mouse.get_pressed()#get mouse press event
 
       mainPlanet.main(display)
-      
+      if mainPlanet.boundTimer > 0:
+            mainPlanet.drawBound(display)
+            mainPlanet.boundTimer -= 1
+            
       keys = pygame.key.get_pressed()
-      if mc[0] == True:
+      #event check
+
+      if mainPlanet.ifCollideMask(ship.mask,[ship.x,ship.y]):
+            PlanetShipDist = [mainPlanet.center[0]-ship.centered[0],mainPlanet.center[1]-ship.centered[1]]
+            ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])
+            ship.speed[0] = -ship.speed[0]-math.cos(math.radians(ang))*10
+            ship.speed[1] = -ship.speed[1]+math.sin(math.radians(ang))*10
+            ship.speedIncrease = 0.7
+            mainPlanet.boundTimer = mainPlanet.maxBoundTimer
+            mainPlanet.transparency = 0
+            
+      elif mc[0] == True:
             particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 30)))
             ship.speed[0] = math.cos(math.radians(angle))*5
             ship.speed[1] = math.sin(math.radians(angle))*5
@@ -283,6 +326,7 @@ while True:
       #if keys[pygame.K_d]:
        #     ship.x += 5
 
+      #partincles
       for par in particles:
             if par.lifetime > 0:
                   par.draw(display)
@@ -292,6 +336,7 @@ while True:
       ship.angle = angle
       ship.main(display)
 
+      #bullets loop
       for bull in bullets:
             bull.main(display)
             try:
@@ -309,11 +354,12 @@ while True:
                               asteroids.remove(ast)
 
                   if bull.rect.colliderect(planetRect):
-                        if mainPlanet.ifCollideMask(asteroid.mask,(bull.pos[0],bull.pos[1])):
+                        if mainPlanet.ifCollideMask(bull.mask,(bull.pos[0],bull.pos[1])):
                               bullets.remove(bull)
             except:
                   pass
 
+      #asteroids
       for asteroid in asteroids:
             asteroid.main(display)
 
