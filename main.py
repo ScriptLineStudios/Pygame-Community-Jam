@@ -470,9 +470,8 @@ while True:
 
             for bull in bullets:
                   if bull.rect.colliderect(uf.rect):
-                        if bull.ifCollideMask(uf.mask,uf.pos):
-                              bullets.pop(bullets.index(bull))
-                              UFOs.pop(UFOs.index(uf))
+                        bullets.pop(bullets.index(bull))
+                        UFOs.pop(UFOs.index(uf))
                               
             for ufBull in uf.bullets:
                   if ufBull.ifCollide(ship.rect):
