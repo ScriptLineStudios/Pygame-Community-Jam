@@ -2,12 +2,15 @@ import pygame, sys, math
 import random as rd
 from pygame.locals import *
 from scripts.spriteSheets import *
+from scripts.game import *
 
 pygame.init()
 
 display = pygame.display.set_mode((800, 800))
 display_size = display.get_size()
 clock = pygame.time.Clock()
+
+pygame.display.set_caption("Asteroids!")
 
 ship_img = pygame.image.load("assets/images/ship1.png").convert()
 ship_img.set_colorkey((255,255,255))
@@ -25,8 +28,8 @@ asteroid_bit_imgs_ = [pygame.image.load("assets/images/bit1.png"), pygame.image.
 asteroid_bit_imgs = []
 
 for img in asteroid_bit_imgs_:
-      img.set_colorkey((255,255,255))
       img = pygame.transform.scale(img, (8,8))
+      img.set_colorkey((255,255,255))
       asteroid_bit_imgs.append(img)
 
 fire_particles_ = [pygame.image.load("assets/images/fire_particle.png"), pygame.image.load("assets/images/fire_particle_1.png")
@@ -38,6 +41,17 @@ for img in fire_particles_:
       img.set_colorkey((255,255,255))
       img = pygame.transform.scale(img, (8,8))
       fire_particles.append(img)
+
+earth_particles_ = [pygame.image.load("assets/images/planet_particle.png"), pygame.image.load("assets/images/planet_particle_1.png")
+                   , pygame.image.load("assets/images/planet_particle_2.png")]
+
+earth_particles = []
+
+for img in earth_particles_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      earth_particles.append(img)
+
 
             
 def rotate(rotatedImage, rect):
@@ -130,11 +144,11 @@ class Asteroid:
             try:
                   towards = (planet_vector - ast_vector).normalize() * 2
 
+                  self.x += towards[0]
+                  self.y += towards[1]
             except:
                   pass
 
-            self.x += towards[0]
-            self.y += towards[1]
 
 
 
@@ -239,6 +253,35 @@ asteroid_spawn_cooldown = 0
 rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
 particles = []
 
+font = pygame.font.Font('assets/font/Laser_1.otf', 64)
+text = font.render('Score: 0', True, (255,255,255))
+textRect = text.get_rect()
+textRect.center = (180, 40)
+
+font_large = pygame.font.Font('assets/font/Laser_1.otf', 80)
+game_over_text = font_large.render('Game Over!', True, (255,255,255))
+game_over_text_rect = game_over_text.get_rect()
+game_over_text_rect.center = (400, 350)
+
+final_score_text = font_large.render('Score: ', True, (255,255,255))
+final_score_text_rect = final_score_text.get_rect()
+final_score_text_rect.center = (325, 410)
+
+score = 0
+
+circles = []
+
+game_over = False
+
+difficulty = 100
+
+difficulty_increases = [False, False, False]
+#The difficulty will increase when the score reaches these numbers
+difficulty_figures = [10, 20, 30]
+difficulty_index = 0
+
+UFO_timer = 300
+UFOs = []
 while True:
       display.fill((0,0,0))
       
@@ -258,14 +301,34 @@ while True:
                         bullets.append(bullet(shootPos,ship.angle))
                         shootTimer = 0
 
+                  if event.key == K_RETURN:
+                        score = 0
+                        asteroids = []
+                        game_over = False
+                        difficulty = 100
+                        difficulty_increases = [False, False, False]
+                        difficulty_figures = [10, 20, 30]
+                        difficulty_index = 0
+                        
+
       if asteroid_spawn_cooldown == 0:
-            ImageIndex = rd.randint(0,len(asteroid_imgs)-1)
-            choice = rd.choice(rand_spawns)
-            asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
-            rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
-            asteroid_spawn_cooldown = 100
+            if not game_over:
+                  ImageIndex = rd.randint(0,len(asteroid_imgs)-1)
+                  choice = rd.choice(rand_spawns)
+                  asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
+                  rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+                  asteroid_spawn_cooldown = difficulty
       else:
             asteroid_spawn_cooldown -= 1
+
+      if difficulty_index < len(difficulty_figures):
+            if score == difficulty_figures[difficulty_index] and difficulty_increases[difficulty_index] == False:
+                  difficulty -= 10
+                  difficulty_increases[difficulty_index] = True
+                  print(difficulty_increases)
+
+                  difficulty_index += 1
+                  print(difficulty_index)
 
       mouse_x, mouse_y = pygame.mouse.get_pos()
       rel_x, rel_y = mouse_x - (ship.x+ship.size[0]//2), mouse_y - (ship.y+ship.size[1]//2)
@@ -276,24 +339,25 @@ while True:
       mp = pygame.mouse.get_pos()#get mouse position
       mc = pygame.mouse.get_pressed()#get mouse press event
 
-      mainPlanet.main(display)
-      if mainPlanet.boundTimer > 0:
-            mainPlanet.drawBound(display)
-            mainPlanet.boundTimer -= 1
+      if not game_over:
+            mainPlanet.main(display)
+            if mainPlanet.boundTimer > 0:
+                  mainPlanet.drawBound(display)
+                  mainPlanet.boundTimer -= 1
+
+            if mainPlanet.ifCollideMask(ship.mask,[ship.x,ship.y]):
+                  PlanetShipDist = [mainPlanet.center[0]-ship.rect.center[0],mainPlanet.center[1]-ship.rect.center[1]]#distance between planet center and ship center
+                  ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])#getting angle from hypotenuse
+                  
+                  ship.speed[0] = -ship.speed[0]-math.cos(ang)*10#reject ship from planet
+                  ship.speed[1] = -ship.speed[1]+math.sin(ang)*10#
+                  ship.speedIncrease = 0.7
+                  mainPlanet.boundTimer = mainPlanet.maxBoundTimer
+                  mainPlanet.transparency = 0
             
       keys = pygame.key.get_pressed()
       #event check
       
-      if mainPlanet.ifCollideMask(ship.mask,[ship.x,ship.y]):
-            PlanetShipDist = [mainPlanet.center[0]-ship.rect.center[0],mainPlanet.center[1]-ship.rect.center[1]]#distance between planet center and ship center
-            ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])#getting angle from hypotenuse
-            
-            ship.speed[0] = -ship.speed[0]-math.cos(ang)*10#reject ship from planet
-            ship.speed[1] = -ship.speed[1]+math.sin(ang)*10#
-            ship.speedIncrease = 0.7
-            mainPlanet.boundTimer = mainPlanet.maxBoundTimer
-            mainPlanet.transparency = 0
-            
       if mc[0] == True and mainPlanet.boundTimer == 0:
             particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 30)))
             ship.speed[0] = math.cos(math.radians(angle))*5
@@ -334,6 +398,13 @@ while True:
             else:
                   particles.remove(par)
 
+      for circle in circles:
+        circle[2] += 8
+        if circle[2] > 30:
+            circle[3] -= 1
+        if circle[3] > 0:
+            pygame.draw.circle(display, circle[4], (circle[0], circle[1]), circle[2], circle[3])
+
       ship.angle = angle
       ship.main(display)
 
@@ -349,24 +420,75 @@ while True:
 
                   for ast in asteroids:
                         if ast.rect.colliderect(bull.rect):
+                              circles.append([ast.rect.center[0]+rd.randrange(-10, 10), ast.rect.center[1]+rd.randrange(-10, 10), 25, 12, (163, 167, 194)])
+
+                              score += 1
                               for i in range(15):
-                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), 0.1, asteroid_bit_imgs, 100))
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, asteroid_bit_imgs, 100))
 
                               asteroids.remove(ast)
 
                   if bull.rect.colliderect(planetRect):
                         if mainPlanet.ifCollideMask(bull.mask,(bull.pos[0],bull.pos[1])):
                               bullets.remove(bull)
-            except:
+            except Exception as e:
                   pass
 
       #asteroids
       for asteroid in asteroids:
             asteroid.main(display)
-
+            #particles.append(particle(asteroid.rect.center[0], asteroid.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, 50))
             if asteroid.rect.colliderect(planetRect):
                   if mainPlanet.ifCollideMask(asteroid.mask,(asteroid.x,asteroid.y)):
-                        asteroids.remove(asteroid)
+                        if not game_over:
+                              for x in range(5):
+                                circles.append([mainPlanet.planetRect.center[0]+rd.randrange(-40, 40), mainPlanet.planetRect.center[1]+rd.randrange(-40, 40), 25, 12, (99, 171, 163)])
+
+                              for i in range(50):
+                                    particles.append(particle(mainPlanet.pos[0], mainPlanet.pos[1], rd.randrange(-20, 20), rd.randrange(-10, 0), 4, (163, 167, 194), rd.uniform(-1, 1)/2, earth_particles, 100))
+                              game_over = True
+                              asteroids.remove(asteroid)
+
+      if game_over == False:
+            if len(UFOs) == 0:
+                  UFO_timer -= 1
+
+      for uf in UFOs:
+            uf.main(display,ship)
+
+            for bull in bullets:
+                  if bull.rect.colliderect(uf.rect):
+                        if bull.ifCollideMask(uf.mask,uf.pos):
+                              bullets.pop(bullets.index(bull))
+                              UFOs.pop(UFOs.index(uf))
+            for ufBull in uf.bullets:
+                  if ufBull.ifCollide(ship.rect):
+                        try:
+                              uf.bullets.pop(uf.bullets.index(ufBull))
+                        except:
+                              pass
+                        game_over = True
+            if uf.dir['left'] == True:
+                  if uf.pos[0] < 0:
+                        UFOs.pop(UFOs.index(uf))
+            if uf.dir['right'] == True:
+                  if uf.pos[0] > display_size[0]+uf.image_size[0]:
+                        UFOs.pop(UFOs.index(uf))
+
+      
+      if UFO_timer < 0:
+            UFO_timer = 300
+            if len(UFOs) == 0:
+                  UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
+      #game over
+      if game_over:
+            final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
+            display.blit(game_over_text, game_over_text_rect)
+            display.blit(final_score_text, final_score_text_rect)
+
+      else:
+            text = font.render('Score: ' + str(score), True, (255,255,255))
+            display.blit(text, textRect)
 
       pygame.display.update()
       clock.tick(60)
