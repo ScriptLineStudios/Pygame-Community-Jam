@@ -57,7 +57,7 @@ class UFO():
 
         self.bullets = []
         
-        self.bulletTimer = 100
+        self.bulletTimer = 80
         self.image = pygame.image.load('assets/images/UFO.png')
         self.image_size = self.image.get_size()
         self.image.set_colorkey((0,0,0))
@@ -81,10 +81,11 @@ class UFO():
         #ship and UFO angle
         dist = [self.pos[0]-ship.rect.center[0],self.pos[1]-ship.rect.center[1]]
         bullAngle = math.atan2(dist[1],dist[0])
+        angleChoice = [bullAngle, rd.randint(1,359)]
         self.bulletTimer += 1
-        if self.bulletTimer >= 100:
+        if self.bulletTimer >= 80:
             self.bulletTimer = 0
-            self.bullets.append(ufoBullet([self.pos[0]+self.image_size[0]//2,self.pos[1]+self.image_size[1]//2],bullAngle))
+            self.bullets.append(ufoBullet([self.pos[0]+self.image_size[0]//2,self.pos[1]+self.image_size[1]//2],rd.choice(angleChoice)))
 
         for bull in self.bullets:
               bull.main(display)
