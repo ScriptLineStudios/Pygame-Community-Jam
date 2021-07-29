@@ -224,6 +224,13 @@ class bullet:
 
           pygame.draw.circle(display,self.color,self.pos,self.radius)
 
+      def ifCollideMask(self,mask,pos):
+            dist = [int(self.pos[0]-pos[0]),int(self.pos[1]-pos[1])]
+
+            if self.mask.overlap(mask,dist):
+                  return True
+            else:
+                  return False
 class particle(object):
     def __init__(self, x, y, x_vel, y_vel, radius, color, gravity_scale, images, lifetime):
         self.x = x 
@@ -253,12 +260,15 @@ asteroid_spawn_cooldown = 0
 rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
 particles = []
 
+
 font = pygame.font.Font('assets/font/Laser_1.otf', 64)
 text = font.render('Score: 0', True, (255,255,255))
 textRect = text.get_rect()
 textRect.center = (180, 40)
 
 font_large = pygame.font.Font('assets/font/Laser_1.otf', 80)
+
+
 game_over_text = font_large.render('Game Over!', True, (255,255,255))
 game_over_text_rect = game_over_text.get_rect()
 game_over_text_rect.center = (400, 350)
@@ -280,8 +290,10 @@ difficulty_increases = [False, False, False]
 difficulty_figures = [10, 20, 30]
 difficulty_index = 0
 
+
 UFO_timer = 300
 UFOs = []
+
 while True:
       display.fill((0,0,0))
       
@@ -461,6 +473,7 @@ while True:
                         if bull.ifCollideMask(uf.mask,uf.pos):
                               bullets.pop(bullets.index(bull))
                               UFOs.pop(UFOs.index(uf))
+                              
             for ufBull in uf.bullets:
                   if ufBull.ifCollide(ship.rect):
                         try:
@@ -481,6 +494,7 @@ while True:
             if len(UFOs) == 0:
                   UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
       #game over
+
       if game_over:
             final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
             display.blit(game_over_text, game_over_text_rect)
