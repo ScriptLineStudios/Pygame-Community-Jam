@@ -36,8 +36,8 @@ class ufoBullet:
             else:
                   return False
 
-      def ifMaskCollide(self,mask,pos):
-            dist = [self.pos[0]-pos,self.pos[1]-pos[1]]
+      def ifCollideMask(self,mask,pos):
+            dist = [int(self.pos[0]-pos[0]),int(self.pos[1]-pos[1])]
 
             if self.mask.overlap(mask,dist):
                   return True
