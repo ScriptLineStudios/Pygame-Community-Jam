@@ -8,7 +8,7 @@ pygame.init()
 class ufoBullet:
       def __init__(self,pos,angle):
           self.pos = pos
-          self.radius = 4
+          self.radius = 6
           self.color = (255,255,255)
           self.angle = angle
 
