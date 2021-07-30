@@ -514,7 +514,7 @@ while True:
                         UFOs.pop(UFOs.index(uf))
       
       
-      if score >= 0:
+      if score >= 25:
             if UFO_timer < 0:
                   UFO_timer = 300
                   if len(UFOs) == 0:
