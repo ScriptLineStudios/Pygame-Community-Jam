@@ -3,7 +3,7 @@ import random as rd
 from pygame.locals import *
 from scripts.spriteSheets import *
 from scripts.game import *
-
+from scripts.UI import *
 pygame.init()
 
 display = pygame.display.set_mode((800, 800))
@@ -51,6 +51,16 @@ for img in earth_particles_:
       img.set_colorkey((255,255,255))
       img = pygame.transform.scale(img, (8,8))
       earth_particles.append(img)
+
+ufo_particles_ = [pygame.image.load("assets/images/ufo_particle.png"), pygame.image.load("assets/images/ufo_particle_1.png")
+                   , pygame.image.load("assets/images/ufo_particle_2.png")]
+
+ufo_particles = []
+
+for img in ufo_particles_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      ufo_particles.append(img)
 
 
             
@@ -112,6 +122,13 @@ planetSheet = pygame.image.load('assets/images/planet.png').convert()
 planetSheet.set_colorkey()
 planetSize = [128,128]#planetFrameSize
 mainPlanet = planet([display_size[0]//2-planetSize[0]//2,display_size[1]//2-planetSize[1]//2],planetSheet)#atribute0 - centering position, atribute1 - planet scpritesheet
+
+
+#Init menu
+mainMen = mainMenu(display_size)
+transit = cubeTrans(display,display,display_size)
+startTrans = False
+
 
 class star:
       def __init__(self,pos,radius,color):
@@ -195,7 +212,6 @@ class Ship:
             self.mask = pygame.mask.from_surface(image)
             display.blit(image, self.centered)#rotate(image,self.rect) - rotate from center
    
-#Would be cool if we add mask collision(pixel perfect), but for now rects
 bullets = []
 class bullet:
       def __init__(self,pos,angle):
@@ -242,15 +258,20 @@ class particle(object):
         self.color = color
         self.lifetime = lifetime
         self.gravity_scale = gravity_scale
-        self.img = rd.choice(images)
+        try:
+              self.img = rd.choice(images)
+        except:
+              pass
 
     def draw(self, display):
         self.lifetime -= 1
         self.gravity -= self.gravity_scale
         self.x += self.x_vel
         self.y += self.y_vel * self.gravity
-        display.blit(self.img, (int(self.x), int(self.y)))
-        #pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
+        try:
+              display.blit(self.img, (int(self.x), int(self.y)))
+        except:
+              pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
 
 shootTimer = 20
 ship = Ship(300, 300)
@@ -269,6 +290,7 @@ textRect.center = (180, 40)
 font_large = pygame.font.Font('assets/font/Laser_1.otf', 80)
 
 
+
 game_over_text = font_large.render('Game Over!', True, (255,255,255))
 game_over_text_rect = game_over_text.get_rect()
 game_over_text_rect.center = (400, 350)
@@ -281,13 +303,14 @@ score = 0
 
 circles = []
 
+game_stop = True
 game_over = False
 
 difficulty = 100
 
-difficulty_increases = [False, False, False]
+difficulty_increases = [False, False, False, False, False]
 #The difficulty will increase when the score reaches these numbers
-difficulty_figures = [10, 20, 30]
+difficulty_figures = [10, 20, 30, 40, 50]
 difficulty_index = 0
 
 
@@ -314,22 +337,25 @@ while True:
                         shootTimer = 0
 
                   if event.key == K_RETURN:
-                        score = 0
-                        asteroids = []
-                        game_over = False
-                        difficulty = 100
-                        difficulty_increases = [False, False, False]
-                        difficulty_figures = [10, 20, 30]
-                        difficulty_index = 0
+                        if game_over:
+                              score = 0
+                              asteroids = []
+                              game_over = False
+                              difficulty = 100
+                              difficulty_increases = [False, False, False]
+                              difficulty_figures = [10, 20, 30]
+                              difficulty_index = 0
                         
-
+                  if event.key == K_SPACE:
+                        startTrans = True
       if asteroid_spawn_cooldown == 0:
             if not game_over:
-                  ImageIndex = rd.randint(0,len(asteroid_imgs)-1)
-                  choice = rd.choice(rand_spawns)
-                  asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
-                  rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
-                  asteroid_spawn_cooldown = difficulty
+                  if game_stop == False:
+                        ImageIndex = rd.randint(0,len(asteroid_imgs)-1)
+                        choice = rd.choice(rand_spawns)
+                        asteroids.append(Asteroid(choice[0], choice[1],asteroid_imgs[ImageIndex],asteroidMasks[ImageIndex]))
+                        rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randrange(0, 800), 850], [rd.randrange(0, 800), 0]]
+                        asteroid_spawn_cooldown = difficulty
       else:
             asteroid_spawn_cooldown -= 1
 
@@ -352,6 +378,7 @@ while True:
       mc = pygame.mouse.get_pressed()#get mouse press event
 
       if not game_over:
+
             mainPlanet.main(display)
             if mainPlanet.boundTimer > 0:
                   mainPlanet.drawBound(display)
@@ -360,7 +387,7 @@ while True:
             if mainPlanet.ifCollideMask(ship.mask,[ship.x,ship.y]):
                   PlanetShipDist = [mainPlanet.center[0]-ship.rect.center[0],mainPlanet.center[1]-ship.rect.center[1]]#distance between planet center and ship center
                   ang = math.atan2(PlanetShipDist[1],PlanetShipDist[1])#getting angle from hypotenuse
-                  
+                        
                   ship.speed[0] = -ship.speed[0]-math.cos(ang)*10#reject ship from planet
                   ship.speed[1] = -ship.speed[1]+math.sin(ang)*10#
                   ship.speedIncrease = 0.7
@@ -403,7 +430,7 @@ while True:
       #if keys[pygame.K_d]:
        #     ship.x += 5
 
-      #partincles
+      #particles
       for par in particles:
             if par.lifetime > 0:
                   par.draw(display)
@@ -462,15 +489,21 @@ while True:
                               asteroids.remove(asteroid)
 
       if game_over == False:
-            if len(UFOs) == 0:
-                  UFO_timer -= 1
+            if game_stop == False:
+                  if len(UFOs) == 0:
+                        UFO_timer -= 1
 
       for uf in UFOs:
             uf.main(display,ship)
 
+            #particles.append(particle(uf.rect.center[0], uf.rect.center[1], rd.randrange(-2, 2), rd.randrange(-1, 0), 4, (163, 167, 194), 0, None, rd.randrange(20, 30)))
+
             for bull in bullets:
                   if bull.rect.colliderect(uf.rect):
                         try:
+                              for i in range(15):
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ufo_particles, 100))
+
                               bullets.pop(bullets.index(bull))
                               UFOs.pop(UFOs.index(uf))
                         except:
@@ -489,14 +522,25 @@ while True:
             if uf.dir['right'] == True:
                   if uf.pos[0] > display_size[0]+uf.image_size[0]:
                         UFOs.pop(UFOs.index(uf))
-
+<<<<<<< HEAD
+      
       
       if UFO_timer < 0:
             UFO_timer = 300
             if len(UFOs) == 0:
                   UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
-      #game over
+=======
 
+      if score >= 25:
+            if UFO_timer < 0:
+                  UFO_timer = rd.randrange(300, 400)
+                  if len(UFOs) == 0:
+                        if ship.y > 400:
+                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,400)],display_size))
+                        else:
+                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(400,800)],display_size))
+>>>>>>> 8089a56b35f87f34f52c5d26eacf659fa377641c
+      #game over
       if game_over:
             final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
             display.blit(game_over_text, game_over_text_rect)
@@ -506,5 +550,16 @@ while True:
             text = font.render('Score: ' + str(score), True, (255,255,255))
             display.blit(text, textRect)
 
+      #draw MAIN MENU
+      if startTrans == False:
+            mainMen.main(display)
+            transit.disp1 = mainMen.disp
+      
+      if startTrans == True:
+              transit.disp2 = display
+              transit.main(display)
+              if transit.transEnd == True:
+                    game_stop = False
+            
       pygame.display.update()
       clock.tick(60)

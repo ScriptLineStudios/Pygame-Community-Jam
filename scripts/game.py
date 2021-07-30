@@ -1,14 +1,21 @@
 import pygame,math
 import random as rd
-
+from scripts.spriteSheets import *
 pygame.init()
-#from scripts.game import *
+
 #ship class, bullet,space,star,planet
+
+def ifCollideMask(mask,mask1,pos,pos1):
+    dist = [int(pos[0]-pos1[0]),int(pos[1]-pos1[1])]
+    if mask.overlap(mask1,dist):
+        return True
+    else:
+        return False
 
 class ufoBullet:
       def __init__(self,pos,angle):
           self.pos = pos
-          self.radius = 4
+          self.radius = 6
           self.color = (255,255,255)
           self.angle = angle
 
@@ -18,7 +25,7 @@ class ufoBullet:
           pygame.draw.circle(self.surf,self.color,(self.radius,self.radius),self.radius)
           self.mask = pygame.mask.from_surface(self.surf)
 
-          self.bulletSpeed = 5
+          self.bulletSpeed = 3
 
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
 
@@ -95,5 +102,64 @@ class UFO():
             return True
         else:
             return False
+
+class bigAstPiece():
+    def __init__(self,pos,sheet,cellSize,mask):
+        self.pos = pos
+        
+        self.sheet = spriteSheet(sheet,cellSize)
+        for sh in self.sheet:
+            sh.set_colorkey((0,0,0))
+            
+        self.rect = self.image.get_rect(topleft=self.pos)
+
+        self.angle = rd.randrange(0,360)
     
-#ufo = UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size)
+        self.mask = pygame.mask.from_surface(self.sheet[0])
+        
+    def main(self,display,planetRect,planet):
+        ast_vector = pygame.Vector2(self.rect.center)
+        planet_vector = pygame.Vector2(planetRect.center)
+            
+        try:
+            towards = (planet_vector - ast_vector).normalize() * 2
+
+            self.pos[0] += towards[0]
+            self.pos[1] += towards[1]
+        except:
+            pass
+
+        display.blit(pygame.transform.rotate(self.image, self.angle), (55, 50)),(self.pos[0],self.pos[1])
+
+class bigAsteroid():
+    def __init__(self,pos,sheet,cellSize,mask):
+        self.pos = pos
+        
+        self.sheet = spriteSheet(sheet,cellSize)
+        for sh in self.sheet:
+            sh.set_colorkey((0,0,0))
+            
+        self.rect = self.image.get_rect(topleft=self.pos)
+
+        self.angle = rd.randrange(0,360)
+    
+        self.mask = pygame.mask.from_surface(self.sheet[0])
+
+        self.atan = 0
+        self.pieces = []
+
+        self.visible = True
+
+    def main(self,display,planetRect):
+        if self.visible == True:
+            dist = [self.rect.center[0]-planetRect.center[0],self.rect.center[1]-planetRect.center[1]]
+            
+            self.atan = math.atan2(dist[1],dist[0])
+            self.pos[0] += math.cos(self.atan)
+            self.pos[1] -= math.sin(self.atan)
+
+
+            display.blit(pygame.transform.rotate(self.image, self.angle), (55, 50)),(self.pos[0],self.pos[1])
+
+    def addPieces(self):
+        self.pieces.append([self.pos[0]+math.cos(self.atan)*30,self.pos[1]-math.sin(self.atan)*30])
