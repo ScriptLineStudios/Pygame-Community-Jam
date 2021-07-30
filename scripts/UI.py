@@ -65,6 +65,19 @@ class button():
         if self.rect.colliderect(mr):
             pass
 
+class Settings():
+    def __init__(self,dispSize):
+        self.disp = pygame.Surface(dispSize)
+        self.disp.fill((0,0,0))
+
+        self.dispSize = dispSize
+
+        self.opened = False
+
+    def main(self,display):
+        if self.opened == True:
+            pass
+
 class mainMenu():
     def __init__(self,dispSize):
         self.disp = pygame.Surface(dispSize)
@@ -76,6 +89,8 @@ class mainMenu():
         self.colors = [[254,0,0],[254,128,0],[254,254,0],[0,254,0],[0,200,200],[154,0,254],[198,0,222]]
 
         self.transition = False
+
+        self.settingsMen = Settings(dispSize)
         
         self.logoPos = [0,200]
         self.logo = pygame.image.load('assets/images/logo_big.png')

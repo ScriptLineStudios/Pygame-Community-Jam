@@ -52,7 +52,15 @@ for img in earth_particles_:
       img = pygame.transform.scale(img, (8,8))
       earth_particles.append(img)
 
+ufo_particles_ = [pygame.image.load("assets/images/ufo_particle.png"), pygame.image.load("assets/images/ufo_particle_1.png")
+                   , pygame.image.load("assets/images/ufo_particle_2.png")]
 
+ufo_particles = []
+
+for img in ufo_particles_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      ufo_particles.append(img)
             
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
@@ -293,9 +301,9 @@ game_over = False
 
 difficulty = 100
 
-difficulty_increases = [False, False, False]
+difficulty_increases = [False, False, False, False, False]
 #The difficulty will increase when the score reaches these numbers
-difficulty_figures = [10, 20, 30]
+difficulty_figures = [10, 20, 30, 40, 50]
 difficulty_index = 0
 
 
@@ -322,13 +330,14 @@ while True:
                         shootTimer = 0
 
                   if event.key == K_RETURN:
-                        score = 0
-                        asteroids = []
-                        game_over = False
-                        difficulty = 100
-                        difficulty_increases = [False, False, False]
-                        difficulty_figures = [10, 20, 30]
-                        difficulty_index = 0
+                        if game_over:
+                              score = 0
+                              asteroids = []
+                              game_over = False
+                              difficulty = 100
+                              difficulty_increases = [False, False, False]
+                              difficulty_figures = [10, 20, 30]
+                              difficulty_index = 0
                         
                   if event.key == K_SPACE:
                         startTrans = True
@@ -485,6 +494,8 @@ while True:
                         try:
                               bullets.pop(bullets.index(bull))
                               UFOs.pop(UFOs.index(uf))
+                              for i in range(15):
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ufo_particles, 100))
                         except:
                               pass
                         score += 1                              
@@ -503,11 +514,12 @@ while True:
                         UFOs.pop(UFOs.index(uf))
       
       
-      if UFO_timer < 0:
-            UFO_timer = 300
-            if len(UFOs) == 0:
-                  UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
-      #game over
+      if score >= 0:
+            if UFO_timer < 0:
+                  UFO_timer = 300
+                  if len(UFOs) == 0:
+                        UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
+                        #game over
       if game_over:
             final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
             display.blit(game_over_text, game_over_text_rect)
