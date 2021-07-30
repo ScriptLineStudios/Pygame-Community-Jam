@@ -52,16 +52,6 @@ for img in earth_particles_:
       img = pygame.transform.scale(img, (8,8))
       earth_particles.append(img)
 
-ufo_particles_ = [pygame.image.load("assets/images/ufo_particle.png"), pygame.image.load("assets/images/ufo_particle_1.png")
-                   , pygame.image.load("assets/images/ufo_particle_2.png")]
-
-ufo_particles = []
-
-for img in ufo_particles_:
-      img.set_colorkey((255,255,255))
-      img = pygame.transform.scale(img, (8,8))
-      ufo_particles.append(img)
-
 
             
 def rotate(rotatedImage, rect):
@@ -258,20 +248,15 @@ class particle(object):
         self.color = color
         self.lifetime = lifetime
         self.gravity_scale = gravity_scale
-        try:
-              self.img = rd.choice(images)
-        except:
-              pass
+        self.img = rd.choice(images)
 
     def draw(self, display):
         self.lifetime -= 1
         self.gravity -= self.gravity_scale
         self.x += self.x_vel
         self.y += self.y_vel * self.gravity
-        try:
-              display.blit(self.img, (int(self.x), int(self.y)))
-        except:
-              pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
+        display.blit(self.img, (int(self.x), int(self.y)))
+        #pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
 
 shootTimer = 20
 ship = Ship(300, 300)
@@ -308,9 +293,9 @@ game_over = False
 
 difficulty = 100
 
-difficulty_increases = [False, False, False, False, False]
+difficulty_increases = [False, False, False]
 #The difficulty will increase when the score reaches these numbers
-difficulty_figures = [10, 20, 30, 40, 50]
+difficulty_figures = [10, 20, 30]
 difficulty_index = 0
 
 
@@ -337,14 +322,13 @@ while True:
                         shootTimer = 0
 
                   if event.key == K_RETURN:
-                        if game_over:
-                              score = 0
-                              asteroids = []
-                              game_over = False
-                              difficulty = 100
-                              difficulty_increases = [False, False, False]
-                              difficulty_figures = [10, 20, 30]
-                              difficulty_index = 0
+                        score = 0
+                        asteroids = []
+                        game_over = False
+                        difficulty = 100
+                        difficulty_increases = [False, False, False]
+                        difficulty_figures = [10, 20, 30]
+                        difficulty_index = 0
                         
                   if event.key == K_SPACE:
                         startTrans = True
@@ -496,14 +480,9 @@ while True:
       for uf in UFOs:
             uf.main(display,ship)
 
-            #particles.append(particle(uf.rect.center[0], uf.rect.center[1], rd.randrange(-2, 2), rd.randrange(-1, 0), 4, (163, 167, 194), 0, None, rd.randrange(20, 30)))
-
             for bull in bullets:
                   if bull.rect.colliderect(uf.rect):
                         try:
-                              for i in range(15):
-                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ufo_particles, 100))
-
                               bullets.pop(bullets.index(bull))
                               UFOs.pop(UFOs.index(uf))
                         except:
@@ -522,24 +501,12 @@ while True:
             if uf.dir['right'] == True:
                   if uf.pos[0] > display_size[0]+uf.image_size[0]:
                         UFOs.pop(UFOs.index(uf))
-<<<<<<< HEAD
       
       
       if UFO_timer < 0:
             UFO_timer = 300
             if len(UFOs) == 0:
                   UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
-=======
-
-      if score >= 25:
-            if UFO_timer < 0:
-                  UFO_timer = rd.randrange(300, 400)
-                  if len(UFOs) == 0:
-                        if ship.y > 400:
-                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,400)],display_size))
-                        else:
-                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(400,800)],display_size))
->>>>>>> 8089a56b35f87f34f52c5d26eacf659fa377641c
       #game over
       if game_over:
             final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
