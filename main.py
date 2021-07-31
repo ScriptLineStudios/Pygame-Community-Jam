@@ -5,6 +5,7 @@ from scripts.spriteSheets import *
 from scripts.game import *
 from scripts.UI import *
 import time
+pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.init()
 
 display = pygame.display.set_mode((800, 800))
@@ -12,6 +13,8 @@ display_size = display.get_size()
 clock = pygame.time.Clock()
 
 pygame.display.set_caption("Asteroids!")
+
+cursor_imgs = [pygame.image.load("assets/images/cursor.png"), pygame.image.load("assets/images/cursor1.png")]
 
 ship_img = pygame.image.load("assets/images/ship1.png").convert()
 ship_img.set_colorkey((255,255,255))
@@ -73,6 +76,21 @@ pygame.mixer.music.load("assets/GamePlay.mp3")
 
 game_over_sound = pygame.mixer.Sound("assets/GameOver.wav")
 
+asteroid_sound_effects = [pygame.mixer.Sound("assets/Soundeffects/Space-SFX-DestroyAsteroid1.wav"),
+                          pygame.mixer.Sound("assets/Soundeffects/Space-SFX-DestroyAsteroid2.wav")
+                          ,pygame.mixer.Sound("assets/Soundeffects/Space-SFX-DestroyAsteroid3.wav")]
+
+for asteroid_sound in asteroid_sound_effects:
+      asteroid_sound.set_volume(0.5)
+
+player_sound_effects = [pygame.mixer.Sound("assets/Soundeffects/Space-SFX-Shoot1.wav"),
+                          pygame.mixer.Sound("assets/Soundeffects/Space-SFX-Shoot2.mp3")]
+
+for player_sound in player_sound_effects:
+      player_sound.set_volume(0.5)
+
+player_jet_sound = pygame.mixer.Sound("assets/Soundeffects/jetsound.wav")
+player_jet_sound.set_volume(0.1)
             
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
@@ -224,12 +242,13 @@ class Ship:
    
 bullets = []
 class bullet:
-      def __init__(self,pos,angle):
+      def __init__(self,pos,angle, rot_img_angle):
           self.pos = pos
           self.radius = 5
           self.color = (95,255,66)
           self.angle = angle
           self.bullet_image = None
+          self.img = pygame.image.load("assets/images/bullet.png")
 
 
           self.surf = pygame.Surface((self.radius*2,self.radius*2))
@@ -243,17 +262,21 @@ class bullet:
 
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
 
+          self.rot_img_angle = rot_img_angle
+
       def main(self,display):
           self.rect = pygame.Rect(self.pos[0],self.pos[1],self.radius*2,self.radius*2)
           
           self.pos[0] += math.cos(math.radians(self.angle))*self.bulletSpeed
           self.pos[1] -= math.sin(math.radians(self.angle))*self.bulletSpeed
+          
+          self.first_loop = False
 
           #Wanted to swap circles for rotating rect but couldnt get rotations working
-          #self.bullet_image = pygame.transform.rotate(self.image, angle)
-          #display.blit(pygame.transform.rotate(self.bullet_image, -self.angle), self.pos)
+          self.bullet_image = pygame.transform.rotate(self.img, self.rot_img_angle)
+          display.blit(self.bullet_image, self.pos)
 
-          pygame.draw.circle(display,self.color,self.pos,self.radius)
+          #pygame.draw.circle(display,self.color,self.pos,self.radius)
 
       def ifCollideMask(self,mask,pos):
             dist = [int(self.pos[0]-pos[0]),int(self.pos[1]-pos[1])]
@@ -263,7 +286,7 @@ class bullet:
             else:
                   return False
 class particle(object):
-    def __init__(self, x, y, x_vel, y_vel, radius, color, gravity_scale, images, lifetime):
+    def __init__(self, x, y, x_vel, y_vel, radius, color, gravity_scale, images, lifetime, must_decrease_size):
         self.x = x 
         self.y = y
         self.x_vel = x_vel
@@ -273,10 +296,13 @@ class particle(object):
         self.color = color
         self.lifetime = lifetime
         self.gravity_scale = gravity_scale
+        self.must_decrease_size = must_decrease_size
         try:
               self.img = rd.choice(images)
         except:
               pass
+        self.size = 16
+        self.size_cooldown = 0
 
     def draw(self, display):
         self.lifetime -= 1
@@ -284,9 +310,17 @@ class particle(object):
         self.x += self.x_vel
         self.y += self.y_vel * self.gravity
         try:
-              display.blit(self.img, (int(self.x), int(self.y)))
+              if self.must_decrease_size:
+                    display.blit(pygame.transform.scale(self.img, (self.size, self.size)), (int(self.x), int(self.y)))
+                    if self.size > 0:
+                          if self.size_cooldown == 0:
+                                self.size -= 1
+                                self.size_cooldown = 2
+                          else:
+                                self.size_cooldown -= 1
+              else:
+                    display.blit(self.img, (int(self.x), int(self.y)))
         except:
-              
            pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
 
 shootTimer = 20
@@ -298,12 +332,12 @@ rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randr
 particles = []
 
 
-font = pygame.font.Font('dpcomic.ttf', 64)
+font = pygame.font.Font('assets/font/Laser_1.otf', 64)
 text = font.render('Score: 0', True, (255,255,255))
-textRect = text.get_rect()
-textRect.center = (180, 40)
+scoretextRect = text.get_rect()
+scoretextRect.center = (180, 40)
 
-font_large = pygame.font.Font('dpcomic.ttf', 80)
+font_large = pygame.font.Font('assets/font/Laser_1.otf', 80)
 
 
 
@@ -311,9 +345,12 @@ game_over_text = font_large.render('Game Over!', True, (255,255,255))
 game_over_text_rect = game_over_text.get_rect()
 game_over_text_rect.center = (400, 350)
 
-final_score_text = font_large.render('Score: ', True, (255,255,255))
+final_score_text = font_large.render('Score: ', False, (255,255,255))
 final_score_text_rect = final_score_text.get_rect()
 final_score_text_rect.center = (325, 410)
+
+font_large_menu = pygame.font.Font('assets/font/menu.ttf', 40)
+font_small_menu = pygame.font.Font('assets/font/menu.ttf', 30)
 
 score = 0
 
@@ -322,7 +359,7 @@ circles = []
 game_stop = True
 game_over = False
 
-difficulty = 100
+difficulty = 110
 
 difficulty_increases = [False, False, False, False, False]
 #The difficulty will increase when the score reaches these numbers
@@ -336,7 +373,27 @@ UFOs = []
 has_loaded_game_music = False
 has_loaded_menu_music = False
 
+how_to_play_menu = False
+
+text_to_render = [["Watch Out!"], ["You planet is being"],
+                  ["attacked by Asteroids!"], [" "], [" "],["Hold left mouse"],
+                  ["in the direction you"], ["would like to move"], [" "], [" "],
+                  ["Press space to shoot"], [" "], [" "], ["Avoid UFOs at all cost!"], [" "], [" "],
+                  ["ENTER: Return to Menu"]]
+text_list = []
+
+for i, text in enumerate(text_to_render):
+      text_to_append = font_small_menu.render(text[0], True, (255,255,255))
+      textRect = text_to_append.get_rect()
+      textRect.center = (400, 200+i*30)
+      text_list.append([text_to_append, textRect])
+
+print(text_list)
+
+in_game = False
+
 while True:
+      pygame.mouse.set_visible(False)
       display.fill((0,0,0))
       
       spaceBG.draw(display)
@@ -351,9 +408,14 @@ while True:
 
             if event.type == KEYDOWN:
                   if event.key == K_SPACE and shootTimer == 20:
-                    
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+                        rel_x, rel_y = mouse_x - ship.x, mouse_y - ship.y
+                        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+                        sound = rd.choice(player_sound_effects)
+                        sound.play()
                         shootPos = [ship.rect.center[0]+math.cos(math.radians(ship.angle))*(ship.size[0]//2),ship.rect.center[1]-math.sin(math.radians(ship.angle))*(ship.size[1]//2)]
-                        bullets.append(bullet(shootPos,ship.angle))
+                        bullets.append(bullet(shootPos,ship.angle, angle))
                         circles.append([shootPos[0],shootPos[1], 10, 3, (0, 155, 0)])
                         #particles.append(particle(shootPos[0], shootPos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (0, 255, 0), rd.random()/2, None, 100))
 
@@ -373,6 +435,10 @@ while True:
                         
                   if event.key == K_SPACE:
                         startTrans = True
+
+                  if event.key == K_RETURN and not in_game:
+                        how_to_play_menu = not how_to_play_menu
+                        
       if asteroid_spawn_cooldown == 0:
             if not game_over:
                   if game_stop == False:
@@ -421,14 +487,21 @@ while True:
             
       keys = pygame.key.get_pressed()
       #event check
+
+      mouse_x, mouse_y = pygame.mouse.get_pos()
       
       if mc[0] == True and mainPlanet.boundTimer == 0:
-            particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 30)))
+            display.blit(cursor_imgs[1], (mouse_x, mouse_y))
+            player_jet_sound.play()
+            for x in range(2):
+             particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, rd.randrange(20, 100), True))
             ship.speed[0] = math.cos(math.radians(angle))*5
             ship.speed[1] = math.sin(math.radians(angle))*5
             if ship.speedIncrease < 1.5:
                   ship.speedIncrease += 0.1
       else:
+          display.blit(cursor_imgs[0], (mouse_x, mouse_y))
+          player_jet_sound.stop()
           if ship.speedIncrease > 0:
               ship.speedIncrease -= 0.005
           else:
@@ -486,13 +559,17 @@ while True:
 
                   for ast in asteroids:
                         if ast.rect.colliderect(bull.rect):
-                              circles.append([ast.rect.center[0]+rd.randrange(-10, 10), ast.rect.center[1]+rd.randrange(-10, 10), 25, 12, (163, 167, 194)])
+      
+                              circles.append([ast.rect.center[0]+rd.randrange(-30, 30), ast.rect.center[1]+rd.randrange(-30, 30), 10, 12, (163, 167, 194)])
 
                               score += 1
-                              for i in range(15):
-                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, asteroid_bit_imgs, 100))
+                              for i in range(rd.randrange(30, 60)):
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, asteroid_bit_imgs, 100, False))
 
+                              sound = rd.choice(asteroid_sound_effects)
+                              sound.play()
                               asteroids.remove(ast)
+                              bullets.remove(bull)
 
                   if bull.rect.colliderect(planetRect):
                         if mainPlanet.ifCollideMask(bull.mask,(bull.pos[0],bull.pos[1])):
@@ -516,7 +593,7 @@ while True:
                                 circles.append([mainPlanet.planetRect.center[0]+rd.randrange(-40, 40), mainPlanet.planetRect.center[1]+rd.randrange(-40, 40), 25, 12, (99, 171, 163)])
 
                               for i in range(50):
-                                    particles.append(particle(mainPlanet.pos[0], mainPlanet.pos[1], rd.randrange(-20, 20), rd.randrange(-10, 0), 4, (163, 167, 194), rd.uniform(-1, 1)/2, earth_particles, 100))
+                                    particles.append(particle(mainPlanet.pos[0], mainPlanet.pos[1], rd.randrange(-20, 20), rd.randrange(-10, 0), 4, (163, 167, 194), rd.uniform(-1, 1)/2, earth_particles, 100, False))
                               game_over_sound.play()
                               game_over = True
                               #asteroids.remove(asteroid)
@@ -535,7 +612,7 @@ while True:
                               bullets.pop(bullets.index(bull))
                               UFOs.pop(UFOs.index(uf))
                               for i in range(15):
-                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ufo_particles, 100))
+                                 particles.append(particle(bull.pos[0], bull.pos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ufo_particles, 100, False))
                         except:
                               pass
                         score += 1                              
@@ -552,7 +629,7 @@ while True:
                         game_over_sound.play()
                         
                         for i in range(50):
-                              particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ship_particles, 100))
+                              particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ship_particles, 100, False))
                         game_over = True
             if uf.dir['left'] == True:
                   if uf.pos[0] < 0:
@@ -578,7 +655,7 @@ while True:
 
       else:
             text = font.render('Score: ' + str(score), True, (255,255,255))
-            display.blit(text, textRect)
+            display.blit(text, scoretextRect)
 
       #draw MAIN MENU
       if startTrans == False:
@@ -603,8 +680,25 @@ while True:
                     pygame.mixer.music.load("assets/GamePlay.mp3")
                     pygame.mixer.music.play(-1)
                     has_loaded_game_music = True
+                    in_game = True
               if transit.transEnd == True:
                     game_stop = False
+
+
+      if how_to_play_menu:
+            
+            how_to_play_text = font_large_menu.render("How To Play:", True, (255,255,255))
+            textRect = how_to_play_text.get_rect()
+            textRect.center = (400, 100)
+
+
+
+            pygame.draw.rect(display, (0,0,0), (0,0,800, 800))
+            display.blit(how_to_play_text, textRect)
+
+            for text in text_list:
+                  display.blit(text[0], text[1])
+ 
             
       pygame.display.update()
       clock.tick(60)
