@@ -4,6 +4,7 @@ from pygame.locals import *
 from scripts.spriteSheets import *
 from scripts.game import *
 from scripts.UI import *
+import time
 pygame.init()
 
 display = pygame.display.set_mode((800, 800))
@@ -28,7 +29,7 @@ asteroid_bit_imgs_ = [pygame.image.load("assets/images/bit1.png"), pygame.image.
 asteroid_bit_imgs = []
 
 for img in asteroid_bit_imgs_:
-      img = pygame.transform.scale(img, (8,8))
+      img = pygame.transform.scale(img, (14,14))
       img.set_colorkey((255,255,255))
       asteroid_bit_imgs.append(img)
 
@@ -54,13 +55,24 @@ for img in earth_particles_:
 
 ufo_particles_ = [pygame.image.load("assets/images/ufo_particle.png"), pygame.image.load("assets/images/ufo_particle_1.png")
                    , pygame.image.load("assets/images/ufo_particle_2.png")]
-
 ufo_particles = []
-
 for img in ufo_particles_:
       img.set_colorkey((255,255,255))
       img = pygame.transform.scale(img, (8,8))
       ufo_particles.append(img)
+
+ship_particles_ = [pygame.image.load("assets/images/ship_particle.png"), pygame.image.load("assets/images/ship_particle_1.png")
+                   , pygame.image.load("assets/images/ship_particle_2.png")]
+ship_particles = []
+for img in ship_particles_:
+      img.set_colorkey((255,255,255))
+      img = pygame.transform.scale(img, (8,8))
+      ship_particles.append(img)
+
+pygame.mixer.music.load("assets/GamePlay.mp3")
+
+game_over_sound = pygame.mixer.Sound("assets/GameOver.wav")
+
             
 def rotate(rotatedImage, rect):
       rect = rotatedImage.get_rect(center=rect.center)
@@ -215,8 +227,9 @@ class bullet:
       def __init__(self,pos,angle):
           self.pos = pos
           self.radius = 5
-          self.color = (255,255,255)
+          self.color = (95,255,66)
           self.angle = angle
+          self.bullet_image = None
 
 
           self.surf = pygame.Surface((self.radius*2,self.radius*2))
@@ -235,6 +248,10 @@ class bullet:
           
           self.pos[0] += math.cos(math.radians(self.angle))*self.bulletSpeed
           self.pos[1] -= math.sin(math.radians(self.angle))*self.bulletSpeed
+
+          #Wanted to swap circles for rotating rect but couldnt get rotations working
+          #self.bullet_image = pygame.transform.rotate(self.image, angle)
+          #display.blit(pygame.transform.rotate(self.bullet_image, -self.angle), self.pos)
 
           pygame.draw.circle(display,self.color,self.pos,self.radius)
 
@@ -256,15 +273,21 @@ class particle(object):
         self.color = color
         self.lifetime = lifetime
         self.gravity_scale = gravity_scale
-        self.img = rd.choice(images)
+        try:
+              self.img = rd.choice(images)
+        except:
+              pass
 
     def draw(self, display):
         self.lifetime -= 1
         self.gravity -= self.gravity_scale
         self.x += self.x_vel
         self.y += self.y_vel * self.gravity
-        display.blit(self.img, (int(self.x), int(self.y)))
-        #pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
+        try:
+              display.blit(self.img, (int(self.x), int(self.y)))
+        except:
+              
+           pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), self.radius)
 
 shootTimer = 20
 ship = Ship(300, 300)
@@ -275,12 +298,12 @@ rand_spawns = [[0, rd.randrange(0, 800)], [850, rd.randrange(0, 800)], [rd.randr
 particles = []
 
 
-font = pygame.font.Font('assets/font/Laser_1.otf', 64)
+font = pygame.font.Font('dpcomic.ttf', 64)
 text = font.render('Score: 0', True, (255,255,255))
 textRect = text.get_rect()
 textRect.center = (180, 40)
 
-font_large = pygame.font.Font('assets/font/Laser_1.otf', 80)
+font_large = pygame.font.Font('dpcomic.ttf', 80)
 
 
 
@@ -310,6 +333,9 @@ difficulty_index = 0
 UFO_timer = 300
 UFOs = []
 
+has_loaded_game_music = False
+has_loaded_menu_music = False
+
 while True:
       display.fill((0,0,0))
       
@@ -325,12 +351,18 @@ while True:
 
             if event.type == KEYDOWN:
                   if event.key == K_SPACE and shootTimer == 20:
+                    
                         shootPos = [ship.rect.center[0]+math.cos(math.radians(ship.angle))*(ship.size[0]//2),ship.rect.center[1]-math.sin(math.radians(ship.angle))*(ship.size[1]//2)]
                         bullets.append(bullet(shootPos,ship.angle))
+                        circles.append([shootPos[0],shootPos[1], 10, 3, (0, 155, 0)])
+                        #particles.append(particle(shootPos[0], shootPos[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (0, 255, 0), rd.random()/2, None, 100))
+
                         shootTimer = 0
 
                   if event.key == K_RETURN:
                         if game_over:
+                              pygame.mixer.Sound.stop(game_over_sound)
+                              pygame.mixer.music.play(-1)
                               score = 0
                               asteroids = []
                               game_over = False
@@ -438,7 +470,9 @@ while True:
             pygame.draw.circle(display, circle[4], (circle[0], circle[1]), circle[2], circle[3])
 
       ship.angle = angle
-      ship.main(display)
+
+      if not game_over:
+            ship.main(display)
 
       #bullets loop
       for bull in bullets:
@@ -472,14 +506,20 @@ while True:
             #particles.append(particle(asteroid.rect.center[0], asteroid.rect.center[1], rd.randrange(-3, 3), rd.randrange(-1, 1), 4, (163, 167, 194), 0, fire_particles, 50))
             if asteroid.rect.colliderect(planetRect):
                   if mainPlanet.ifCollideMask(asteroid.mask,(asteroid.x,asteroid.y)):
-                        if not game_over:
+                              asteroids = []
+                              ufos = []
+                              #game_over_sound.play()
+                              pygame.mixer.music.fadeout(1000)
+                              pygame.mixer.music.stop()
+
                               for x in range(5):
                                 circles.append([mainPlanet.planetRect.center[0]+rd.randrange(-40, 40), mainPlanet.planetRect.center[1]+rd.randrange(-40, 40), 25, 12, (99, 171, 163)])
 
                               for i in range(50):
                                     particles.append(particle(mainPlanet.pos[0], mainPlanet.pos[1], rd.randrange(-20, 20), rd.randrange(-10, 0), 4, (163, 167, 194), rd.uniform(-1, 1)/2, earth_particles, 100))
+                              game_over_sound.play()
                               game_over = True
-                              asteroids.remove(asteroid)
+                              #asteroids.remove(asteroid)
 
       if game_over == False:
             if game_stop == False:
@@ -505,6 +545,14 @@ while True:
                               uf.bullets.pop(uf.bullets.index(ufBull))
                         except:
                               pass
+                        asteroids = []
+                        ufos = []
+                        pygame.mixer.music.fadeout(10000)
+                        pygame.mixer.music.stop()
+                        game_over_sound.play()
+                        
+                        for i in range(50):
+                              particles.append(particle(ship.rect.center[0], ship.rect.center[1], rd.randrange(-10, 10), rd.randrange(-10, 0), 4, (163, 167, 194), rd.random()/2, ship_particles, 100))
                         game_over = True
             if uf.dir['left'] == True:
                   if uf.pos[0] < 0:
@@ -518,7 +566,10 @@ while True:
             if UFO_timer < 0:
                   UFO_timer = 300
                   if len(UFOs) == 0:
-                        UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,763)],display_size))
+                        if ship.y > 400:
+                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(0,400)],display_size))
+                        else:
+                              UFOs.append(UFO([rd.choice([-32,display_size[0]]),rd.randint(400,750)],display_size))
                         #game over
       if game_over:
             final_score_text = font_large.render('Score: ' + str(score), True, (255,255,255))
@@ -531,12 +582,27 @@ while True:
 
       #draw MAIN MENU
       if startTrans == False:
+            if not has_loaded_menu_music:
+              pygame.mixer.music.unload()
+              pygame.mixer.music.load("assets/Menu.mp3")
+              pygame.mixer.music.play(-1)
+              has_loaded_menu_music = True
             mainMen.main(display)
             transit.disp1 = mainMen.disp
       
       if startTrans == True:
+
+              
               transit.disp2 = display
               transit.main(display)
+
+              if not has_loaded_game_music:
+                    pygame.mixer.music.fadeout(10000)
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    pygame.mixer.music.load("assets/GamePlay.mp3")
+                    pygame.mixer.music.play(-1)
+                    has_loaded_game_music = True
               if transit.transEnd == True:
                     game_stop = False
             
