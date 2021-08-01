@@ -96,12 +96,15 @@ class mainMenu():
         self.logo = pygame.image.load('assets/images/logo_big.png')
         self.rect = self.logo.get_rect(topleft=self.logoPos)
 
-        self.press_space = UIfont.render('press SPACE to play',False,(255,255,255))
+        self.press_space = UIfont.render('SPACE: Play!',False,(255,255,255))
         self.press_spaceSize = self.press_space.get_size()
 
         
-        self.press_z = UIfont.render('press Z to go to settings',False,(255,255,255))
+        self.press_z = UIfont.render('Z: Settings',False,(255,255,255))
         self.press_zSize = self.press_z.get_size()
+
+        self.press_return = UIfont.render('ENTER: How To Play',False,(255,255,255))
+        self.press_returnSize = self.press_return.get_size()
         
     def main(self,display):
         #check
@@ -128,8 +131,9 @@ class mainMenu():
         pygame.draw.rect(self.disp,self.colors[self.colorIndex],self.rect)
         self.disp.blit(self.logo,self.logoPos)
 
-        self.disp.blit(self.press_space,(self.dispSize[0]//2-self.press_spaceSize[0]//2,600))#self.press_zSize
-        self.disp.blit(self.press_z,(self.dispSize[0]//2-self.press_zSize[0]//2,650))
+        self.disp.blit(self.press_space,(self.dispSize[0]//2-self.press_spaceSize[0]//2,550))#self.press_zSize
+        self.disp.blit(self.press_z,(self.dispSize[0]//2-self.press_zSize[0]//2,600))
+        self.disp.blit(self.press_return,(self.dispSize[0]//2-self.press_returnSize[0]//2,650))
 
         display.blit(self.disp,(0,0))
         
